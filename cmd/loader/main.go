@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"github.com/semirm-dev/findhotel/geo"
+	"github.com/semirm-dev/findhotel/importer"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,7 +18,7 @@ func main() {
 	impCtx, impCancel := context.WithCancel(context.Background())
 	defer impCancel()
 
-	ldr := geo.NewLoader(geo.NewCsvImporter(*path))
+	ldr := geo.NewLoader(importer.NewCsvImporter(*path))
 	ldrFinished := ldr.Load(impCtx)
 
 	go func() {

@@ -16,11 +16,6 @@ type Geo struct {
 	MysteryValue int
 }
 
-// Search will get *geo data from its source
-type Search interface {
-	ByIp(ip string) (*Geo, error)
-}
-
 // Importer will import *geo data from its source
 type Importer interface {
 	Import(context.Context) *Imported
@@ -31,6 +26,12 @@ type Storer interface {
 	Store([]*Geo) error
 }
 
+// Search will get *geo data from its source
+type Search interface {
+	ByIp(ip string) (*Geo, error)
+}
+
+// Imported presents each imported *geo data record/row
 type Imported struct {
 	GeoData  chan *Geo
 	OnError  chan error

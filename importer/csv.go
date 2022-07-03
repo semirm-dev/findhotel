@@ -1,8 +1,9 @@
-package geo
+package importer
 
 import (
 	"context"
 	"encoding/csv"
+	"github.com/semirm-dev/findhotel/geo"
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"
@@ -13,20 +14,20 @@ type csvImporter struct {
 	path string
 }
 
-func NewCsvImporter(path string) Importer {
+func NewCsvImporter(path string) geo.Importer {
 	return &csvImporter{
 		path: path,
 	}
 }
 
-func (imp *csvImporter) Import(ctx context.Context) *Imported {
-	imported := &Imported{
-		GeoData:  make(chan *Geo),
+func (imp *csvImporter) Import(ctx context.Context) *geo.Imported {
+	imported := &geo.Imported{
+		GeoData:  make(chan *geo.Geo),
 		OnError:  make(chan error),
 		Finished: make(chan bool),
 	}
 
-	go func(ctx context.Context, imported *Imported) {
+	go func(ctx context.Context, imported *geo.Imported) {
 		defer func() {
 			close(imported.Finished)
 			logrus.Warn("csv importer finished")
@@ -73,7 +74,7 @@ func (imp *csvImporter) Import(ctx context.Context) *Imported {
 	return imported
 }
 
-func encodeToGeo(row []string) (*Geo, error) {
+func encodeToGeo(row []string) (*geo.Geo, error) {
 	ip, ccode, country, city, lat, long, myst := row[0], row[1], row[2], row[3], row[4], row[5], row[6]
 
 	latitude, err := strconv.ParseFloat(lat, 64)
@@ -89,7 +90,7 @@ func encodeToGeo(row []string) (*Geo, error) {
 		return nil, err
 	}
 
-	return &Geo{
+	return &geo.Geo{
 		Ip:           ip,
 		CountryCode:  ccode,
 		Country:      country,
