@@ -1,6 +1,18 @@
 version: "3.8"
 
 services:
+  loader:
+    image: semirm/findhotel-loader:1
+    build:
+      context: .
+      dockerfile: cmd/loader/Dockerfile
+    container_name: findhotel_loader
+    command:
+      - -storer_uri=findhotel_storer:8001
+    depends_on:
+      - storer
+    networks:
+      - findhotel
   storer:
     image: semirm/findhotel-storer:1
     build:
@@ -17,12 +29,10 @@ services:
       context: .
       dockerfile: cmd/gateway/Dockerfile
     container_name: findhotel_gateway
-    command:
-      - -storer_uri=findhotel_storer:8001
     ports:
       - "8000:8000"
     depends_on:
-      - storer
+      - loader
     networks:
       - findhotel
 networks:

@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	path = flag.String("path ", "cmd/importer/data_dump_part.csv", "")
+	path = flag.String("path ", "cmd/loader/data_dump_part.csv", "")
 )
 
 func main() {
@@ -19,9 +19,10 @@ func main() {
 
 	ldr := geo.NewLoader(geo.NewCsvImporter(*path))
 	ldrFinished := ldr.Load(impCtx)
+
 	go func() {
 		defer logrus.Warn("geo loader finished")
-		
+
 		for {
 			select {
 			case <-ldrFinished:
