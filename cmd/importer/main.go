@@ -5,9 +5,6 @@ import (
 	"flag"
 	"github.com/semirm-dev/findhotel/geo"
 	"github.com/sirupsen/logrus"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 var (
@@ -20,11 +17,11 @@ func main() {
 	impCtx, impCancel := context.WithCancel(context.Background())
 	defer impCancel()
 
-	importer := geo.NewCsvImporter(*path)
-	ldr := geo.NewLoader(importer)
+	ldr := geo.NewLoader(geo.NewCsvImporter(*path))
 	ldrFinished := ldr.Load(impCtx)
 	go func() {
 		defer logrus.Warn("geo loader finished")
+		
 		for {
 			select {
 			case <-ldrFinished:
@@ -35,7 +32,5 @@ func main() {
 
 	logrus.Info("listening for messages...")
 
-	quit := make(chan os.Signal)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	<-ldrFinished
 }

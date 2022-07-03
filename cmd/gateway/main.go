@@ -23,11 +23,11 @@ func main() {
 	impCtx, impCancel := context.WithCancel(context.Background())
 	defer impCancel()
 
-	importer := geo.NewCsvImporter(*path)
-	ldr := geo.NewLoader(importer)
+	ldr := geo.NewLoader(geo.NewCsvImporter(*path))
 	ldrFinished := ldr.Load(impCtx)
 	go func() {
 		defer logrus.Warn("geo loader finished")
+
 		for {
 			select {
 			case <-ldrFinished:

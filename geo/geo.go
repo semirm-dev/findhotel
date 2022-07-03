@@ -47,6 +47,7 @@ func NewLoader(importer Importer) *loader {
 	}
 }
 
+// Load *geo data from Importer and store it in data store using Storer
 func (ldr *loader) Load(ctx context.Context) chan bool {
 	finished := make(chan bool)
 	imported := ldr.importer.Import(ctx)
