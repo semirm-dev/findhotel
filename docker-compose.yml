@@ -1,20 +1,6 @@
 version: "3.8"
 
 services:
-  importer:
-    image: semirm/findhotel-importer:1
-    build:
-      context: .
-      dockerfile: cmd/importer/Dockerfile
-    container_name: findhotel_importer
-    command:
-      - -storer_uri=findhotel_storer:8002
-    ports:
-      - "8001:8001"
-    depends_on:
-      - storer
-    networks:
-      - findhotel
   storer:
     image: semirm/findhotel-storer:1
     build:
@@ -22,7 +8,7 @@ services:
       dockerfile: cmd/storer/Dockerfile
     container_name: findhotel_storer
     ports:
-      - "8002:8002"
+      - "8001:8001"
     networks:
       - findhotel
   gateway:
@@ -32,11 +18,11 @@ services:
       dockerfile: cmd/gateway/Dockerfile
     container_name: findhotel_gateway
     command:
-      - -importer_uri=findhotel_importer:8001
+      - -storer_uri=findhotel_storer:8001
     ports:
       - "8000:8000"
     depends_on:
-      - importer
+      - storer
     networks:
       - findhotel
 networks:
