@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func GetProducts(search geo.Search) gin.HandlerFunc {
+func GetGeoLocation(search geo.Search) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ip, _ := c.GetQuery("ip")
 

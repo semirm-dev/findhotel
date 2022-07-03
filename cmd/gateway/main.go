@@ -42,7 +42,7 @@ func main() {
 
 	router := web.NewRouter()
 
-	router.GET("geo", gateway.GetProducts(ds))
+	router.GET("geo", gateway.GetGeoLocation(ds))
 
 	web.ServeHttp(*httpAddr, "gateway", router)
 }
