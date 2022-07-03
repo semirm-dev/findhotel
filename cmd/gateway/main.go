@@ -16,7 +16,7 @@ const defaultConnStr = "host=localhost port=5432 dbname=findhotel_geo user=postg
 var (
 	httpAddr   = flag.String("http", ":8000", "Http address")
 	connString = flag.String("connStr", defaultConnStr, "Condition Service connection string")
-	path       = flag.String("path ", "cmd/loader/data_dump_part.csv", "path to csv file")
+	path       = flag.String("path ", "cmd/loader/data_dump.csv", "path to csv file")
 )
 
 func main() {

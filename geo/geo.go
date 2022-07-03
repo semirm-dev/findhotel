@@ -66,6 +66,7 @@ func (ldr *loader) Load(ctx context.Context) chan bool {
 			close(finished)
 			logrus.Infof("successfully imported %d records", c)
 			logrus.Infof("failed to import %d records", e)
+			logrus.Infof("total records = %d", c+e)
 			logrus.Infof("finished in %v", time.Now().Sub(t))
 		}()
 
