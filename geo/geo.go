@@ -23,7 +23,7 @@ type Importer interface {
 
 // Storer will store *geo data in data store
 type Storer interface {
-	Store([]*Geo) error
+	Store(*Geo) error
 }
 
 // Search will get *geo data from its source
@@ -40,13 +40,15 @@ type Imported struct {
 
 type loader struct {
 	importer Importer
+	storer   Storer
 }
 
 // NewLoader will initialize *loader.
 // Loader will load *geo data from Importer and store it in data store using Storer
-func NewLoader(importer Importer) *loader {
+func NewLoader(importer Importer, storer Storer) *loader {
 	return &loader{
 		importer: importer,
+		storer:   storer,
 	}
 }
 
@@ -69,8 +71,11 @@ func (ldr *loader) Load(ctx context.Context) chan bool {
 
 		for {
 			select {
-			case <-imported.GeoData:
+			case geoData := <-imported.GeoData:
 				c++
+				if err := ldr.storer.Store(geoData); err != nil {
+					imported.OnError <- err
+				}
 			case <-imported.OnError:
 				e++
 			case <-imported.Finished:

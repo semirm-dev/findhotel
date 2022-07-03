@@ -3,13 +3,18 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/semirm-dev/findhotel/datastore"
 	"github.com/semirm-dev/findhotel/geo"
 	"github.com/semirm-dev/findhotel/importer"
+	"github.com/semirm-dev/findhotel/internal/db"
 	"github.com/sirupsen/logrus"
 )
 
+const defaultConnStr = "host=localhost port=5432 dbname=findhotel_geo user=postgres password=postgres sslmode=disable"
+
 var (
-	path = flag.String("path ", "cmd/loader/data_dump_part.csv", "")
+	path       = flag.String("path ", "cmd/loader/data_dump_part.csv", "path to csv file")
+	connString = flag.String("connStr", defaultConnStr, "Condition Service connection string")
 )
 
 func main() {
@@ -18,7 +23,7 @@ func main() {
 	impCtx, impCancel := context.WithCancel(context.Background())
 	defer impCancel()
 
-	ldr := geo.NewLoader(importer.NewCsvImporter(*path))
+	ldr := geo.NewLoader(importer.NewCsvImporter(*path), datastore.NewPgStore(db.PostgresDb(*connString)))
 	ldrFinished := ldr.Load(impCtx)
 
 	go func() {
