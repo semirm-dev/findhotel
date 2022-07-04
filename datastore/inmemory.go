@@ -10,20 +10,14 @@ func NewInMemoryStore() *inmemory {
 	return &inmemory{}
 }
 
-func (store *inmemory) Store(geoData *geo.Geo) error {
-	store.data = append(store.data, geoData)
+func (storer *inmemory) Store(geoData []*geo.Geo) error {
+	storer.data = append(storer.data, geoData...)
 
 	return nil
 }
 
-func (store *inmemory) StoreMultiple(geoData []*geo.Geo) error {
-	store.data = append(store.data, geoData...)
-
-	return nil
-}
-
-func (store *inmemory) ByIp(ip string) (*geo.Geo, error) {
-	for _, g := range store.data {
+func (storer *inmemory) ByIp(ip string) (*geo.Geo, error) {
+	for _, g := range storer.data {
 		if g.Ip == ip {
 			return g, nil
 		}

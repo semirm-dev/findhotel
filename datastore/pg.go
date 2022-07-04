@@ -32,21 +32,17 @@ func NewPgStore(db *gorm.DB) *pgStore {
 	}
 }
 
-func (store *pgStore) Store(geoData *geo.Geo) error {
-	return store.db.Create(geoToEntity(geoData)).Error
-}
-
-func (store *pgStore) StoreMultiple(geoData []*geo.Geo) error {
+func (storer *pgStore) Store(geoData []*geo.Geo) error {
 	var bulk []*Geo
 
 	for _, g := range geoData {
 		bulk = append(bulk, geoToEntity(g))
 	}
 
-	return store.db.Create(bulk).Error
+	return storer.db.Create(bulk).Error
 }
 
-func (store *pgStore) ByIp(ip string) (*geo.Geo, error) {
+func (storer *pgStore) ByIp(ip string) (*geo.Geo, error) {
 	return nil, nil
 }
 

@@ -24,10 +24,9 @@ func NewCsvImporter(path string, batchSize int) geo.Importer {
 
 func (imp *csvImporter) Import(ctx context.Context) *geo.Imported {
 	imported := &geo.Imported{
-		GeoData:         make(chan *geo.Geo),
-		GeoDataMultiple: make(chan []*geo.Geo),
-		OnError:         make(chan error),
-		Finished:        make(chan bool),
+		GeoDataBatch: make(chan []*geo.Geo),
+		OnError:      make(chan error),
+		Finished:     make(chan bool),
 	}
 
 	go func(ctx context.Context, imported *geo.Imported) {
@@ -62,7 +61,7 @@ func (imp *csvImporter) Import(ctx context.Context) *geo.Imported {
 					if err == io.EOF {
 						// check for leftover, incomplete buf
 						if len(buf) > 0 {
-							imported.GeoDataMultiple <- buf
+							imported.GeoDataBatch <- buf
 						}
 						return
 					}
@@ -82,15 +81,10 @@ func (imp *csvImporter) Import(ctx context.Context) *geo.Imported {
 					continue
 				}
 
-				if imp.batchSize == 0 {
-					imported.GeoData <- geoData
-					continue
-				}
-
 				buf = append(buf, geoData)
 
 				if len(buf) >= imp.batchSize {
-					imported.GeoDataMultiple <- buf
+					imported.GeoDataBatch <- buf
 					buf = nil // reset buf
 				}
 			}

@@ -3,6 +3,7 @@ package geo
 import (
 	"context"
 	"github.com/sirupsen/logrus"
+	"strings"
 	"time"
 )
 
@@ -23,8 +24,7 @@ type Importer interface {
 
 // Storer will store *geo data in data store
 type Storer interface {
-	Store(*Geo) error
-	StoreMultiple([]*Geo) error
+	Store([]*Geo) error
 }
 
 // Search will get *geo data from its source
@@ -34,10 +34,9 @@ type Search interface {
 
 // Imported presents each imported *geo data record/row
 type Imported struct {
-	GeoData         chan *Geo
-	GeoDataMultiple chan []*Geo
-	OnError         chan error
-	Finished        chan bool
+	GeoDataBatch chan []*Geo
+	OnError      chan error
+	Finished     chan bool
 }
 
 type loader struct {
@@ -74,14 +73,9 @@ func (ldr *loader) Load(ctx context.Context) chan bool {
 
 		for {
 			select {
-			case geoData := <-imported.GeoData:
-				c++
-				if err := ldr.storer.Store(geoData); err != nil {
-					imported.OnError <- err
-				}
-			case geoData := <-imported.GeoDataMultiple:
+			case geoData := <-imported.GeoDataBatch:
 				c += len(geoData)
-				if err := ldr.storer.StoreMultiple(geoData); err != nil {
+				if err := ldr.storer.Store(geoData); err != nil {
 					imported.OnError <- err
 				}
 			case <-imported.OnError:
@@ -95,4 +89,12 @@ func (ldr *loader) Load(ctx context.Context) chan bool {
 	}(ctx)
 
 	return finished
+}
+
+func (g *Geo) valid() bool {
+	if strings.TrimSpace(g.Ip) == "" {
+		return false
+	}
+
+	return true
 }
