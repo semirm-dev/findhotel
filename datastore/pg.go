@@ -3,6 +3,7 @@ package datastore
 import (
 	"github.com/semirm-dev/findhotel/geo"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"time"
 )
 
@@ -27,23 +28,41 @@ type Geo struct {
 func NewPgStore(db *gorm.DB) *pgStore {
 	db.AutoMigrate(&Geo{})
 
+	db.Logger = logger.Default.LogMode(logger.Silent)
+
 	return &pgStore{
 		db: db,
 	}
 }
 
-func (storer *pgStore) Store(geoData []*geo.Geo) error {
+func (storer *pgStore) Store(geoData []*geo.Geo) (int, error) {
 	var bulk []*Geo
 
 	for _, g := range geoData {
+		existing, _ := storer.ByIp(g.Ip)
+		if existing != nil {
+			continue
+		}
+
 		bulk = append(bulk, geoToEntity(g))
 	}
 
-	return storer.db.Create(bulk).Error
+	if len(bulk) == 0 {
+		return 0, nil
+	}
+
+	return len(bulk), storer.db.Create(bulk).Error
 }
 
 func (storer *pgStore) ByIp(ip string) (*geo.Geo, error) {
-	return nil, nil
+	var geoData *Geo
+	if result := storer.db.Where("ip", ip).Find(&geoData); result.Error != nil {
+		return nil, result.Error
+	}
+	if geoData.Id == 0 {
+		return nil, nil
+	}
+	return entityToGeo(geoData), nil
 }
 
 func geoToEntity(geoData *geo.Geo) *Geo {
@@ -55,5 +74,17 @@ func geoToEntity(geoData *geo.Geo) *Geo {
 		Latitude:     geoData.Latitude,
 		Longitude:    geoData.Longitude,
 		MysteryValue: geoData.MysteryValue,
+	}
+}
+
+func entityToGeo(entity *Geo) *geo.Geo {
+	return &geo.Geo{
+		Ip:           entity.Ip,
+		CountryCode:  entity.CountryCode,
+		Country:      entity.Country,
+		City:         entity.City,
+		Latitude:     entity.Latitude,
+		Longitude:    entity.Longitude,
+		MysteryValue: entity.MysteryValue,
 	}
 }

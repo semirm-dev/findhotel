@@ -10,10 +10,10 @@ func NewInMemoryStore() *inmemory {
 	return &inmemory{}
 }
 
-func (storer *inmemory) Store(geoData []*geo.Geo) error {
+func (storer *inmemory) Store(geoData []*geo.Geo) (int, error) {
 	storer.data = append(storer.data, geoData...)
 
-	return nil
+	return len(geoData), nil
 }
 
 func (storer *inmemory) ByIp(ip string) (*geo.Geo, error) {

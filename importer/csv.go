@@ -26,12 +26,11 @@ func (imp *csvImporter) Import(ctx context.Context) *geo.Imported {
 	imported := &geo.Imported{
 		GeoDataBatch: make(chan []*geo.Geo),
 		OnError:      make(chan error),
-		Finished:     make(chan bool),
 	}
 
 	go func(ctx context.Context, imported *geo.Imported) {
 		defer func() {
-			close(imported.Finished)
+			close(imported.GeoDataBatch)
 			logrus.Warn("csv importer finished")
 		}()
 

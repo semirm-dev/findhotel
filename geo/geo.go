@@ -24,7 +24,7 @@ type Importer interface {
 
 // Storer will store *geo data in data store
 type Storer interface {
-	Store([]*Geo) error
+	Store([]*Geo) (int, error)
 }
 
 // Search will get *geo data from its source
@@ -36,7 +36,6 @@ type Search interface {
 type Imported struct {
 	GeoDataBatch chan []*Geo
 	OnError      chan error
-	Finished     chan bool
 }
 
 type loader struct {
@@ -54,41 +53,13 @@ func NewLoader(importer Importer, storer Storer) *loader {
 }
 
 // Load will start loading *geo data from Importer to Storer
-func (ldr *loader) Load(ctx context.Context) chan bool {
-	finished := make(chan bool)
+func (ldr *loader) Load(ctx context.Context) {
+	t := time.Now()
 	imported := ldr.importer.Import(ctx)
-
-	go func(ctx context.Context) {
-		c := 0
-		e := 0
-		t := time.Now()
-
-		defer func() {
-			close(finished)
-			logrus.Infof("successfully imported %d records", c)
-			logrus.Infof("failed to import %d records", e)
-			logrus.Infof("total records = %d", c+e)
-			logrus.Infof("finished in %v", time.Now().Sub(t))
-		}()
-
-		for {
-			select {
-			case geoData := <-imported.GeoDataBatch:
-				c += len(geoData)
-				if err := ldr.storer.Store(geoData); err != nil {
-					imported.OnError <- err
-				}
-			case <-imported.OnError:
-				e++
-			case <-imported.Finished:
-				return
-			case <-ctx.Done():
-				return
-			}
-		}
-	}(ctx)
-
-	return finished
+	filtered := ldr.filterValidGeoData(ctx, imported)
+	ldr.storeGeoData(ctx, filtered)
+	logrus.Info("---")
+	logrus.Infof("total time finished in %v", time.Now().Sub(t))
 }
 
 func (g *Geo) valid() bool {
@@ -97,4 +68,82 @@ func (g *Geo) valid() bool {
 	}
 
 	return true
+}
+
+func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) chan []*Geo {
+	filtered := make(chan []*Geo)
+
+	go func() {
+		c := 0
+		b := 0
+		e := 0
+		t := time.Now()
+
+		defer func() {
+			logrus.Info("---")
+			logrus.Infof("total records = %d", b+e)
+			logrus.Infof("successfully imported %d records", c)
+			logrus.Infof("failed to import %d records", (b-c)+e)
+			logrus.Infof("finished in %v", time.Now().Sub(t))
+
+			close(filtered)
+		}()
+
+		for {
+			select {
+			case geoData, ok := <-imported.GeoDataBatch:
+				if !ok {
+					return
+				}
+				b += len(geoData)
+
+				batch := make([]*Geo, 0)
+				for _, g := range geoData {
+					if g.valid() {
+						batch = append(batch, g)
+					}
+				}
+				c += len(batch)
+				filtered <- batch
+			case <-imported.OnError:
+				e++
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	return filtered
+}
+
+func (ldr *loader) storeGeoData(ctx context.Context, filtered <-chan []*Geo) {
+	c := 0
+	b := 0
+	t := time.Now()
+
+	defer func() {
+		logrus.Info("---")
+		logrus.Infof("total records to store = %d", b)
+		logrus.Infof("successfully stored %d records", c)
+		logrus.Infof("failed to store %d records", b-c)
+		logrus.Infof("store finished in %v", time.Now().Sub(t))
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case batch, ok := <-filtered:
+			if !ok {
+				return
+			}
+			b += len(batch)
+
+			stored, err := ldr.storer.Store(batch)
+			c += stored
+			if err != nil {
+				continue
+			}
+		}
+	}
 }
