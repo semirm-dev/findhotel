@@ -8,19 +8,12 @@ services:
       dockerfile: cmd/loader/Dockerfile
     container_name: findhotel_loader
     command:
-      - -storer_uri=findhotel_storer:8001
+      - -connStr=host=findhotel_pg port=5432 dbname=findhotel_geo user=postgres password=postgres sslmode=disable
+      - -path=/app-data/data_dump.csv
     depends_on:
-      - storer
-    networks:
-      - findhotel
-  storer:
-    image: semirm/findhotel-storer:1
-    build:
-      context: .
-      dockerfile: cmd/storer/Dockerfile
-    container_name: findhotel_storer
-    ports:
-      - "8001:8001"
+      - db
+    volumes:
+      - ./cmd/loader/data_dump.csv:/app-data/
     networks:
       - findhotel
   gateway:
@@ -29,11 +22,25 @@ services:
       context: .
       dockerfile: cmd/gateway/Dockerfile
     container_name: findhotel_gateway
+    command:
+      - -path=/app-data/data_dump.csv
     ports:
       - "8000:8000"
-    depends_on:
-      - loader
+#    depends_on:
+#      - loader
     networks:
       - findhotel
+  db:
+    image: postgres:latest
+    container_name: findhotel_pg
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=findhotel_geo
+    ports:
+      - "5432:5432"
+  #    volumes:
+  #      - ./db-data/:/var/lib/postgresql/data/
+  #      - ./internal/seed/migrations/created_database.sql:/docker-entrypoint-initdb.d/create_tables.sql
 networks:
   findhotel:
