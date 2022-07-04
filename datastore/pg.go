@@ -19,6 +19,10 @@ func (store *pgStore) Store(geoData *geo.Geo) error {
 	return nil
 }
 
+func (store *pgStore) StoreMultiple(geoData []*geo.Geo) error {
+	return nil
+}
+
 func (store *pgStore) ByIp(ip string) (*geo.Geo, error) {
 	return nil, nil
 }

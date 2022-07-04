@@ -23,7 +23,7 @@ func main() {
 	impCtx, impCancel := context.WithCancel(context.Background())
 	defer impCancel()
 
-	ldr := geo.NewLoader(importer.NewCsvImporter(*path), datastore.NewPgStore(db.PostgresDb(*connString)))
+	ldr := geo.NewLoader(importer.NewCsvImporter(*path, 10000), datastore.NewPgStore(db.PostgresDb(*connString)))
 	ldrFinished := ldr.Load(impCtx)
 
 	go func() {

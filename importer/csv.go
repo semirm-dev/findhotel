@@ -11,20 +11,23 @@ import (
 )
 
 type csvImporter struct {
-	path string
+	path      string
+	batchSize int
 }
 
-func NewCsvImporter(path string) geo.Importer {
+func NewCsvImporter(path string, batchSize int) geo.Importer {
 	return &csvImporter{
-		path: path,
+		path:      path,
+		batchSize: batchSize,
 	}
 }
 
 func (imp *csvImporter) Import(ctx context.Context) *geo.Imported {
 	imported := &geo.Imported{
-		GeoData:  make(chan *geo.Geo),
-		OnError:  make(chan error),
-		Finished: make(chan bool),
+		GeoData:         make(chan *geo.Geo),
+		GeoDataMultiple: make(chan []*geo.Geo),
+		OnError:         make(chan error),
+		Finished:        make(chan bool),
 	}
 
 	go func(ctx context.Context, imported *geo.Imported) {
@@ -46,6 +49,7 @@ func (imp *csvImporter) Import(ctx context.Context) *geo.Imported {
 		}()
 
 		csvr := csv.NewReader(csvFile)
+		buf := make([]*geo.Geo, 0, imp.batchSize)
 
 		for {
 			select {
@@ -55,6 +59,10 @@ func (imp *csvImporter) Import(ctx context.Context) *geo.Imported {
 				row, err := csvr.Read()
 				if err != nil {
 					if err == io.EOF {
+						// check for leftover, incomplete buf
+						if len(buf) > 0 {
+							imported.GeoDataMultiple <- buf
+						}
 						return
 					}
 					imported.OnError <- err
@@ -66,7 +74,18 @@ func (imp *csvImporter) Import(ctx context.Context) *geo.Imported {
 					imported.OnError <- err
 					continue
 				}
-				imported.GeoData <- geoData
+
+				if imp.batchSize == 0 {
+					imported.GeoData <- geoData
+					continue
+				}
+
+				buf = append(buf, geoData)
+
+				if len(buf) >= imp.batchSize {
+					imported.GeoDataMultiple <- buf
+					buf = nil // reset buf
+				}
 			}
 		}
 	}(ctx, imported)

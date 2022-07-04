@@ -26,7 +26,7 @@ func main() {
 	defer impCancel()
 
 	ds := datastore.NewInMemoryStore()
-	ldr := geo.NewLoader(importer.NewCsvImporter(*path), ds)
+	ldr := geo.NewLoader(importer.NewCsvImporter(*path, 10000), ds)
 	ldrFinished := ldr.Load(impCtx)
 
 	go func() {
