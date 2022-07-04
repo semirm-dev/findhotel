@@ -50,6 +50,7 @@ func (imp *csvImporter) Import(ctx context.Context) *geo.Imported {
 
 		csvr := csv.NewReader(csvFile)
 		buf := make([]*geo.Geo, 0, imp.batchSize)
+		first := true
 
 		for {
 			select {
@@ -66,6 +67,12 @@ func (imp *csvImporter) Import(ctx context.Context) *geo.Imported {
 						return
 					}
 					imported.OnError <- err
+					continue
+				}
+
+				// skip first record, it's csv header
+				if first {
+					first = false
 					continue
 				}
 
@@ -97,15 +104,15 @@ func encodeToGeo(row []string) (*geo.Geo, error) {
 	ip, ccode, country, city, lat, long, myst := row[0], row[1], row[2], row[3], row[4], row[5], row[6]
 
 	latitude, err := strconv.ParseFloat(lat, 64)
-	if err != nil {
+	if err != nil && lat != "" {
 		return nil, err
 	}
 	longitude, err := strconv.ParseFloat(long, 64)
-	if err != nil {
+	if err != nil && long != "" {
 		return nil, err
 	}
 	mystVal, err := strconv.Atoi(myst)
-	if err != nil {
+	if err != nil && myst != "" {
 		return nil, err
 	}
 
