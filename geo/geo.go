@@ -55,9 +55,11 @@ func NewLoader(importer Importer, storer Storer) *loader {
 // Load will start loading *geo data from Importer to Storer
 func (ldr *loader) Load(ctx context.Context) {
 	t := time.Now()
+
 	imported := ldr.importer.Import(ctx)
 	filtered := ldr.filterValidGeoData(ctx, imported)
 	ldr.storeGeoData(ctx, filtered)
+
 	logrus.Info("---")
 	logrus.Infof("total time finished in %v", time.Now().Sub(t))
 }
