@@ -22,12 +22,10 @@ services:
       context: .
       dockerfile: cmd/gateway/Dockerfile
     container_name: findhotel_gateway
-    command:
-      - -path=/app-data/data_dump.csv
     ports:
       - "8000:8000"
-#    depends_on:
-#      - loader
+    depends_on:
+      - loader
     networks:
       - findhotel
   db:
