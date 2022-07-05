@@ -14,7 +14,7 @@ import (
 const defaultConnStr = "host=localhost port=5432 dbname=findhotel_geo user=postgres password=postgres sslmode=disable"
 
 var (
-	path       = flag.String("path ", "cmd/loader/data_dump_med.csv", "path to csv file")
+	path       = flag.String("path ", "cmd/loader/data_dump.csv", "path to csv file")
 	connString = flag.String("connStr", defaultConnStr, "Condition Service connection string")
 )
 

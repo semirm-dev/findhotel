@@ -8,13 +8,13 @@ import (
 )
 
 type Geo struct {
-	Ip           string
-	CountryCode  string
-	Country      string
-	City         string
-	Latitude     float64
-	Longitude    float64
-	MysteryValue int
+	Ip           string  `json:"ip"`
+	CountryCode  string  `json:"country_code"`
+	Country      string  `json:"country"`
+	City         string  `json:"city"`
+	Latitude     float64 `json:"latitude"`
+	Longitude    float64 `json:"longitude"`
+	MysteryValue int     `json:"mystery_value"`
 }
 
 // Importer will import *geo data from its source
