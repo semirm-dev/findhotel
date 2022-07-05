@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/sirupsen/logrus"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -88,20 +90,22 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 	filtered := make(chan []*Geo)
 
 	go func() {
-		b := 0
-		i := 0
-		e := 0
+		var b, i, e int32
 		t := time.Now()
+		wg := sync.WaitGroup{}
 
-		defer func() {
+		defer func(wg *sync.WaitGroup) {
+			wg.Wait()
 			close(filtered)
 
+			f := time.Now().Sub(t)
 			logrus.Infof("=== import csv ===\n"+
 				"- total records for import = %d\n"+
 				"- successfully imported = %d\n"+
 				"- skipped records = %d\n"+
-				"- import finished in %v", b+e, i, (b+e)-i, time.Now().Sub(t))
-		}()
+				"- import finished in %v\n"+
+				"- bench = %d rps", b+e, i, (b+e)-i, f, (b+e)/int32(f.Seconds()))
+		}(&wg)
 
 		for {
 			select {
@@ -109,7 +113,7 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 				if !ok {
 					return
 				}
-				b += len(batch)
+				b += int32(len(batch))
 
 				keysToCheck := make([]string, 0)
 				validBatch := make([]*Geo, 0)
@@ -122,7 +126,7 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 
 				keysExist, err := ldr.cache.Get(keysToCheck)
 				if err != nil {
-					e += len(keysToCheck)
+					atomic.AddInt32(&e, int32(len(keysToCheck)))
 					break
 				}
 
@@ -137,10 +141,14 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 					i++
 				}
 
-				if err = ldr.cache.Store(cacheBucket); err != nil {
-					e += len(cacheBucket)
-					break
-				}
+				wg.Add(1)
+				go func(cacheBucket CacheBucket, wg *sync.WaitGroup) {
+					defer wg.Done()
+					if err = ldr.cache.Store(cacheBucket); err != nil {
+						atomic.AddInt32(&e, int32(len(cacheBucket)))
+						return
+					}
+				}(cacheBucket, &wg)
 
 				filtered <- buf
 			case <-imported.OnError:
@@ -157,18 +165,20 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 // storeGeoData will store *geo data in database.
 // It must be last in the line, all data should already be checked and validated.
 func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
-	b := 0
-	i := 0
-	e := 0
+	var b, i, e int32
 	t := time.Now()
 
-	defer func() {
+	wg := sync.WaitGroup{}
+
+	defer func(wg *sync.WaitGroup) {
+		wg.Wait()
+
 		logrus.Infof("=== store in db ===\n"+
 			"- total records to store = %d\n"+
 			"- successfully stored = %d\n"+
 			"- failed to store = %d\n"+
 			"- store finished in %v", b, i, e, time.Now().Sub(t))
-	}()
+	}(&wg)
 
 	for {
 		select {
@@ -178,13 +188,19 @@ func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
 			if !ok {
 				return
 			}
-			b += len(batch)
+			b += int32(len(batch))
 
-			stored, err := ldr.storer.Store(batch)
-			i += stored
-			if err != nil {
-				e += len(batch)
-			}
+			wg.Add(1)
+			go func(batch []*Geo, wg *sync.WaitGroup) {
+				defer wg.Done()
+				stored, err := ldr.storer.Store(batch)
+
+				atomic.AddInt32(&i, int32(stored))
+
+				if err != nil {
+					atomic.AddInt32(&e, int32(len(batch)))
+				}
+			}(batch, &wg)
 		}
 	}
 }
