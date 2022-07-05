@@ -34,7 +34,7 @@ type Search interface {
 
 // Cache is used to keep track of all previously saved *geo data.
 // It's mainly used for validation to check if there are duplicate entries,
-// which is to make less database calls on *geo data insert
+// that is to make less database calls on *geo data insert
 type Cache interface {
 	Store(string, string) error
 	Get(string) (string, error)
