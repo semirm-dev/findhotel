@@ -3,6 +3,7 @@ package c2go
 import (
 	"encoding/json"
 	"github.com/muesli/cache2go"
+	"time"
 )
 
 type cache struct {
@@ -16,7 +17,7 @@ func NewC2Go(tableName string) *cache {
 }
 
 func (c *cache) Store(key, value string) error {
-	c.engine.Add(key, -1, value)
+	c.engine.Add(key, 24*time.Hour*7, value)
 
 	return nil
 }
