@@ -84,7 +84,7 @@ func (g *Geo) valid() bool {
 }
 
 // filterValidGeoData will sanitize *geo data. Duplicate and corrupted entries will be removed/skipped.
-func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) chan []*Geo {
+func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <-chan []*Geo {
 	filtered := make(chan []*Geo)
 
 	go func() {
