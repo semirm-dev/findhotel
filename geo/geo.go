@@ -32,7 +32,7 @@ type Search interface {
 	ByIp(ip string) (*Geo, error)
 }
 
-// Cache is used to store all previously *geo data.
+// Cache is used to keep track of all previously saved *geo data.
 // It's mainly used for validation to check if there are duplicate entries,
 // which is to make less database calls on *geo data insert
 type Cache interface {
