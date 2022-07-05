@@ -32,11 +32,13 @@ type Search interface {
 	ByIp(ip string) (*Geo, error)
 }
 
+type CacheBucket map[string]string
+
 // Cache is used to keep track of all previously saved *geo data.
 // It's mainly used for validation to check if there are duplicate entries,
 // that is to make less database calls on *geo data insert
 type Cache interface {
-	Store(string, string) error
+	Store(CacheBucket) error
 	Get(string) (string, error)
 }
 
@@ -113,6 +115,7 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 				b += len(batch)
 
 				buf := make([]*Geo, 0)
+				cacheBucket := make(CacheBucket)
 				for _, g := range batch {
 					if g.valid() {
 						cached, _ := ldr.cache.Get(g.Ip)
@@ -121,14 +124,13 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 							continue
 						}
 
-						if err := ldr.cache.Store(g.Ip, g.Ip); err != nil {
-							e++
-							continue
-						}
-
+						cacheBucket[g.Ip] = g.Ip
 						i++
 						buf = append(buf, g)
 					}
+				}
+				if err := ldr.cache.Store(cacheBucket); err != nil {
+					e++
 				}
 				filtered <- buf
 			case <-imported.OnError:

@@ -1,5 +1,7 @@
 package inmemory
 
+import "github.com/semirm-dev/findhotel/geo"
+
 type cache struct {
 	items map[string]string
 }
@@ -8,8 +10,11 @@ func NewInMemory() *cache {
 	return &cache{}
 }
 
-func (c *cache) Store(key, value string) error {
-	c.items[key] = value
+func (c *cache) Store(items geo.CacheBucket) error {
+	for k, v := range items {
+		c.items[k] = v
+	}
+
 	return nil
 }
 

@@ -2,6 +2,7 @@ package redis
 
 import (
 	"github.com/go-redis/redis"
+	"github.com/semirm-dev/findhotel/geo"
 )
 
 // pipeLength defines limit whether to use pipeline or not
@@ -56,8 +57,15 @@ func (c *cache) Initialize() error {
 	return nil
 }
 
-func (c *cache) Store(key, value string) error {
-	return c.Client.Set(key, value, -1).Err()
+func (c *cache) Store(items geo.CacheBucket) error {
+	pipe := c.Pipeline()
+
+	for k, v := range items {
+		pipe.Set(k, v, -1)
+	}
+
+	_, err := pipe.Exec()
+	return err
 }
 
 func (c *cache) Get(key string) (string, error) {

@@ -3,6 +3,7 @@ package c2go
 import (
 	"encoding/json"
 	"github.com/muesli/cache2go"
+	"github.com/semirm-dev/findhotel/geo"
 	"time"
 )
 
@@ -16,8 +17,10 @@ func NewC2Go(tableName string) *cache {
 	}
 }
 
-func (c *cache) Store(key, value string) error {
-	c.engine.Add(key, 24*time.Hour*7, value)
+func (c *cache) Store(items geo.CacheBucket) error {
+	for k, v := range items {
+		c.engine.Add(k, 24*time.Hour*7, v)
+	}
 
 	return nil
 }
