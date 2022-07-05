@@ -6,7 +6,7 @@ type inmemory struct {
 	data []*geo.Geo
 }
 
-func NewInMemoryStore() *inmemory {
+func NewInMemory() *inmemory {
 	return &inmemory{}
 }
 

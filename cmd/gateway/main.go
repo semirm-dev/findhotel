@@ -20,7 +20,7 @@ func main() {
 
 	router := web.NewRouter()
 
-	router.GET("geo", gateway.GetGeoLocation(datastore.NewPgStore(db.PostgresDb(*connString))))
+	router.GET("geo", gateway.GetGeoLocation(datastore.NewPg(db.PostgresDb(*connString))))
 
 	web.ServeHttp(*httpAddr, "gateway", router)
 }

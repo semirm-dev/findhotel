@@ -25,7 +25,7 @@ type Geo struct {
 	DeletedAt    gorm.DeletedAt `gorm:"index"`
 }
 
-func NewPgStore(db *gorm.DB) *pgStore {
+func NewPg(db *gorm.DB) *pgStore {
 	db.AutoMigrate(&Geo{})
 
 	db.Logger = logger.Default.LogMode(logger.Silent)

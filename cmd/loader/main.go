@@ -24,7 +24,7 @@ func main() {
 	impCtx, impCancel := context.WithCancel(context.Background())
 	defer impCancel()
 
-	ds := datastore.NewPgStore(db.PostgresDb(*connString))
+	ds := datastore.NewPg(db.PostgresDb(*connString))
 	conf := redis.NewConfig()
 	cacheStore := redis.NewCache(conf)
 	if err := cacheStore.Initialize(); err != nil {
