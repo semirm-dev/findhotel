@@ -144,6 +144,7 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 				wg.Add(1)
 				go func(cacheBucket CacheBucket, wg *sync.WaitGroup) {
 					defer wg.Done()
+					
 					if err = ldr.cache.Store(cacheBucket); err != nil {
 						atomic.AddInt32(&e, int32(len(cacheBucket)))
 						return
@@ -192,10 +193,9 @@ func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
 			wg.Add(1)
 			go func(batch []*Geo, wg *sync.WaitGroup) {
 				defer wg.Done()
+
 				stored, err := ldr.storer.Store(batch)
-
 				atomic.AddInt32(&i, int32(stored))
-
 				if err != nil {
 					atomic.AddInt32(&e, int32(len(batch)))
 				}
