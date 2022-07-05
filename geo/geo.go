@@ -68,8 +68,7 @@ func (ldr *loader) Load(ctx context.Context) {
 
 	imported := ldr.importer.Import(ctx)
 	filtered := ldr.filterValidGeoData(ctx, imported)
-	cached := ldr.cacheGeoData(ctx, filtered)
-	ldr.storeGeoData(ctx, cached)
+	ldr.storeGeoData(ctx, filtered)
 
 	logrus.Info("---")
 	logrus.Infof("total time finished in %v", time.Now().Sub(t))
@@ -123,6 +122,11 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 							continue
 						}
 
+						if err := ldr.cache.Store(g.Ip, g.Ip); err != nil {
+							e++
+							continue
+						}
+
 						i++
 						buf = append(buf, g)
 					}
@@ -137,55 +141,6 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 	}()
 
 	return filtered
-}
-
-// cacheGeoData will store *geo data in cache (previously filtered).
-// Cached data is later used for duplicate entries validation.
-func (ldr *loader) cacheGeoData(ctx context.Context, geoData <-chan []*Geo) <-chan []*Geo {
-	cached := make(chan []*Geo)
-
-	go func() {
-		b := 0
-		i := 0
-		e := 0
-		t := time.Now()
-
-		defer func() {
-			close(cached)
-
-			logrus.Info("--- cache")
-			logrus.Infof("total records to cache = %d", b)
-			logrus.Infof("successfully cached = %d", i)
-			logrus.Infof("failed to cache = %d", e)
-			logrus.Infof("cache finished in %v", time.Now().Sub(t))
-		}()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case batch, ok := <-geoData:
-				if !ok {
-					return
-				}
-				b += len(batch)
-
-				buf := make([]*Geo, 0)
-				for _, g := range batch {
-					if err := ldr.cache.Store(g.Ip, g.Ip); err != nil {
-						e++
-						continue
-					}
-					i++
-					buf = append(buf, g)
-				}
-
-				cached <- buf
-			}
-		}
-	}()
-
-	return cached
 }
 
 // storeGeoData will store *geo data in database.
