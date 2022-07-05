@@ -58,7 +58,8 @@ func (ldr *loader) Load(ctx context.Context) {
 
 	imported := ldr.importer.Import(ctx)
 	filtered := ldr.filterValidGeoData(ctx, imported)
-	ldr.storeGeoData(ctx, filtered)
+	filteredUnique := ldr.filterUnique(ctx, filtered)
+	ldr.storeGeoData(ctx, filteredUnique)
 
 	logrus.Info("---")
 	logrus.Infof("total time finished in %v", time.Now().Sub(t))
@@ -118,6 +119,40 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) c
 	return filtered
 }
 
+func (ldr *loader) filterUnique(ctx context.Context, filtered <-chan []*Geo) <-chan []*Geo {
+	unique := make(chan []*Geo)
+
+	go func() {
+		defer close(unique)
+
+		buf := make([]*Geo, 0)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case geoData, ok := <-filtered:
+				if !ok {
+					return
+				}
+
+				batch := make([]*Geo, 0)
+				for _, g := range geoData {
+					if !exists(g, buf) {
+						batch = append(batch, g)
+						buf = append(buf, g)
+					}
+				}
+				if len(batch) > 0 {
+					unique <- batch
+				}
+			}
+		}
+	}()
+
+	return unique
+}
+
 func (ldr *loader) storeGeoData(ctx context.Context, filtered <-chan []*Geo) {
 	c := 0
 	b := 0
@@ -141,11 +176,21 @@ func (ldr *loader) storeGeoData(ctx context.Context, filtered <-chan []*Geo) {
 			}
 			b += len(batch)
 
-			stored, err := ldr.storer.Store(batch)
-			c += stored
-			if err != nil {
-				continue
-			}
+			//stored, err := ldr.storer.Store(batch)
+			//c += stored
+			//if err != nil {
+			//	continue
+			//}
 		}
 	}
+}
+
+func exists(g *Geo, buf []*Geo) bool {
+	for _, b := range buf {
+		if g.Ip == b.Ip {
+			return true
+		}
+	}
+
+	return false
 }
