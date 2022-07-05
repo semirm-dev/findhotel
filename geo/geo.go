@@ -190,16 +190,16 @@ func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
 			}
 			b += int32(len(batch))
 
-			//wg.Add(1)
-			//go func(batch []*Geo, wg *sync.WaitGroup) {
-			//	defer wg.Done()
-			//
-			//	stored, err := ldr.storer.Store(batch)
-			//	atomic.AddInt32(&i, int32(stored))
-			//	if err != nil {
-			//		atomic.AddInt32(&e, int32(len(batch)))
-			//	}
-			//}(batch, &wg)
+			wg.Add(1)
+			go func(batch []*Geo, wg *sync.WaitGroup) {
+				defer wg.Done()
+
+				stored, err := ldr.storer.Store(batch)
+				atomic.AddInt32(&i, int32(stored))
+				if err != nil {
+					atomic.AddInt32(&e, int32(len(batch)))
+				}
+			}(batch, &wg)
 		}
 	}
 }
