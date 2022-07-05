@@ -167,7 +167,6 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
 	var b, i, e int32
 	t := time.Now()
-
 	wg := sync.WaitGroup{}
 
 	defer func(wg *sync.WaitGroup) {
