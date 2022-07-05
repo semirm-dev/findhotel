@@ -70,8 +70,7 @@ func (ldr *loader) Load(ctx context.Context) {
 	filtered := ldr.filterValidGeoData(ctx, imported)
 	ldr.storeGeoData(ctx, filtered)
 
-	logrus.Info("---")
-	logrus.Infof("total time finished in %v", time.Now().Sub(t))
+	logrus.Infof("=== total time finished in %v ===", time.Now().Sub(t))
 }
 
 func (g *Geo) valid() bool {
@@ -96,13 +95,13 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 		defer func() {
 			close(filtered)
 
-			logrus.Info("--- import csv")
-			logrus.Infof("total records for import = %d", b+e)
-			logrus.Infof("successfully imported = %d", i)
-			logrus.Infof("previously cached (duplicate entries) = %d", c)
-			logrus.Infof("invalid imports = %d", e)
-			logrus.Infof("skipped records = %d", c+e)
-			logrus.Infof("import finished in %v", time.Now().Sub(t))
+			logrus.Infof("=== import csv ===\n"+
+				"- total records for import = %d\n"+
+				"- successfully imported = %d\n"+
+				"- previously cached (duplicate entries) = %d\n"+
+				"- invalid imports = %d\n"+
+				"- skipped records = %d\n"+
+				"- import finished in %v", b+e, i, c, e, c+e, time.Now().Sub(t))
 		}()
 
 		for {
@@ -152,11 +151,11 @@ func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
 	t := time.Now()
 
 	defer func() {
-		logrus.Info("--- store in db")
-		logrus.Infof("total records to store = %d", b)
-		logrus.Infof("successfully stored = %d", i)
-		logrus.Infof("failed to store = %d", e)
-		logrus.Infof("store finished in %v", time.Now().Sub(t))
+		logrus.Infof("=== store in db ===\n"+
+			"- total records to store = %d\n"+
+			"- successfully stored = %d\n"+
+			"- failed to store = %d\n"+
+			"- store finished in %v", b, i, e, time.Now().Sub(t))
 	}()
 
 	for {
