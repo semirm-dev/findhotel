@@ -68,8 +68,8 @@ func (ldr *loader) Load(ctx context.Context) {
 
 	imported := ldr.importer.Import(ctx)
 	filtered := ldr.filterValidGeoData(ctx, imported)
-	stored := ldr.storeGeoData(ctx, filtered)
-	ldr.cacheGeoData(ctx, stored)
+	cached := ldr.cacheGeoData(ctx, filtered)
+	ldr.storeGeoData(ctx, cached)
 
 	logrus.Info("---")
 	logrus.Infof("total time finished in %v", time.Now().Sub(t))
@@ -97,7 +97,7 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) c
 			logrus.Info("--- import csv")
 			logrus.Infof("total records for import = %d", b+e)
 			logrus.Infof("successfully imported = %d", i)
-			logrus.Infof("previously cached = %d", c)
+			logrus.Infof("previously cached (duplicate entries) = %d", c)
 			logrus.Infof("invalid imports = %d", e)
 			logrus.Infof("skipped records = %d", c+e)
 			logrus.Infof("import finished in %v", time.Now().Sub(t))
@@ -116,8 +116,8 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) c
 				buf := make([]*Geo, 0)
 				for _, g := range batch {
 					if g.valid() {
-						cached, err := ldr.cache.Get(g.Ip)
-						if err == nil && strings.TrimSpace(cached) != "" {
+						cached, _ := ldr.cache.Get(g.Ip)
+						if strings.TrimSpace(cached) != "" {
 							c++
 							continue
 						}
@@ -138,22 +138,23 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) c
 	return filtered
 }
 
-func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) <-chan []*Geo {
-	storedItems := make(chan []*Geo)
-	b := 0
-	i := 0
-	e := 0
-	t := time.Now()
+func (ldr *loader) cacheGeoData(ctx context.Context, geoData <-chan []*Geo) <-chan []*Geo {
+	cached := make(chan []*Geo)
 
 	go func() {
-		defer func() {
-			logrus.Info("--- store in db")
-			logrus.Infof("total records to store = %d", b)
-			logrus.Infof("successfully stored = %d", i)
-			logrus.Infof("failed to store = %d", e)
-			logrus.Infof("store finished in %v", time.Now().Sub(t))
+		b := 0
+		i := 0
+		e := 0
+		t := time.Now()
 
-			close(storedItems)
+		defer func() {
+			logrus.Info("--- cache")
+			logrus.Infof("total records to cache = %d", b)
+			logrus.Infof("successfully cached = %d", i)
+			logrus.Infof("failed to cache = %d", e)
+			logrus.Infof("cache finished in %v", time.Now().Sub(t))
+
+			close(cached)
 		}()
 
 		for {
@@ -166,35 +167,37 @@ func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) <-ch
 				}
 				b += len(batch)
 
-				stored, err := ldr.storer.Store(batch)
-				i += stored
-				if err != nil {
-					e++
-					continue
+				buf := make([]*Geo, 0)
+				for _, g := range batch {
+					if err := ldr.cache.Store(g.Ip, g.Ip); err != nil {
+						e++
+						continue
+					}
+					i++
+					buf = append(buf, g)
 				}
 
-				// TODO: handle items not successfully stored,
-				// we do not have guarantee that all batched items will be stored
-				storedItems <- batch
+				cached <- buf
 			}
 		}
 	}()
 
-	return storedItems
+	return cached
 }
 
-func (ldr *loader) cacheGeoData(ctx context.Context, geoData <-chan []*Geo) {
+// storeGeoData must be last in the line, all data should be already checked and validated
+func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
 	b := 0
 	i := 0
 	e := 0
 	t := time.Now()
 
 	defer func() {
-		logrus.Info("--- cache")
-		logrus.Infof("total records to cache = %d", b)
-		logrus.Infof("successfully cached = %d", i)
-		logrus.Infof("failed to cache = %d", e)
-		logrus.Infof("cache finished in %v", time.Now().Sub(t))
+		logrus.Info("--- store in db")
+		logrus.Infof("total records to store = %d", b)
+		logrus.Infof("successfully stored = %d", i)
+		logrus.Infof("failed to store = %d", e)
+		logrus.Infof("store finished in %v", time.Now().Sub(t))
 	}()
 
 	for {
@@ -207,12 +210,11 @@ func (ldr *loader) cacheGeoData(ctx context.Context, geoData <-chan []*Geo) {
 			}
 			b += len(batch)
 
-			for _, g := range batch {
-				if err := ldr.cache.Store(g.Ip, g.Ip); err != nil {
-					e++
-					continue
-				}
-				i++
+			stored, err := ldr.storer.Store(batch)
+			i += stored
+			if err != nil {
+				e++
+				continue
 			}
 		}
 	}
