@@ -83,6 +83,7 @@ func (g *Geo) valid() bool {
 	return true
 }
 
+// filterValidGeoData will sanitize *geo data. Duplicate and corrupted entries will be removed/skipped.
 func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) chan []*Geo {
 	filtered := make(chan []*Geo)
 
@@ -138,6 +139,8 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) c
 	return filtered
 }
 
+// cacheGeoData will store *geo data in cache (previously filtered).
+// Cached data is later used for duplicate entries validation.
 func (ldr *loader) cacheGeoData(ctx context.Context, geoData <-chan []*Geo) <-chan []*Geo {
 	cached := make(chan []*Geo)
 
@@ -185,7 +188,8 @@ func (ldr *loader) cacheGeoData(ctx context.Context, geoData <-chan []*Geo) <-ch
 	return cached
 }
 
-// storeGeoData must be last in the line, all data should be already checked and validated
+// storeGeoData will store *geo data in database.
+// It must be last in the line, all data should already be checked and validated.
 func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
 	b := 0
 	i := 0
