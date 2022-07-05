@@ -95,6 +95,8 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 		t := time.Now()
 
 		defer func() {
+			close(filtered)
+
 			logrus.Info("--- import csv")
 			logrus.Infof("total records for import = %d", b+e)
 			logrus.Infof("successfully imported = %d", i)
@@ -102,8 +104,6 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 			logrus.Infof("invalid imports = %d", e)
 			logrus.Infof("skipped records = %d", c+e)
 			logrus.Infof("import finished in %v", time.Now().Sub(t))
-
-			close(filtered)
 		}()
 
 		for {
@@ -151,13 +151,13 @@ func (ldr *loader) cacheGeoData(ctx context.Context, geoData <-chan []*Geo) <-ch
 		t := time.Now()
 
 		defer func() {
+			close(cached)
+
 			logrus.Info("--- cache")
 			logrus.Infof("total records to cache = %d", b)
 			logrus.Infof("successfully cached = %d", i)
 			logrus.Infof("failed to cache = %d", e)
 			logrus.Infof("cache finished in %v", time.Now().Sub(t))
-
-			close(cached)
 		}()
 
 		for {
