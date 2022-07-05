@@ -32,6 +32,14 @@ type Search interface {
 	ByIp(ip string) (*Geo, error)
 }
 
+// Cache is used to store all previously *geo data.
+// It's mainly used for validation to check if there are duplicate entries,
+// which is to make less database calls on *geo data insert
+type Cache interface {
+	Store(string, string) error
+	Get(string) (string, error)
+}
+
 // Imported presents each imported *geo data record/row
 type Imported struct {
 	GeoDataBatch chan []*Geo
@@ -41,14 +49,16 @@ type Imported struct {
 type loader struct {
 	importer Importer
 	storer   Storer
+	cache    Cache
 }
 
 // NewLoader will initialize *loader.
 // Loader will load *geo data from Importer and store it in data store using Storer
-func NewLoader(importer Importer, storer Storer) *loader {
+func NewLoader(importer Importer, storer Storer, cache Cache) *loader {
 	return &loader{
 		importer: importer,
 		storer:   storer,
+		cache:    cache,
 	}
 }
 
@@ -58,8 +68,8 @@ func (ldr *loader) Load(ctx context.Context) {
 
 	imported := ldr.importer.Import(ctx)
 	filtered := ldr.filterValidGeoData(ctx, imported)
-	filteredUnique := ldr.filterUnique(ctx, filtered)
-	ldr.storeGeoData(ctx, filteredUnique)
+	stored := ldr.storeGeoData(ctx, filtered)
+	ldr.cacheGeoData(ctx, stored)
 
 	logrus.Info("---")
 	logrus.Infof("total time finished in %v", time.Now().Sub(t))
@@ -77,37 +87,46 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) c
 	filtered := make(chan []*Geo)
 
 	go func() {
-		c := 0
 		b := 0
+		i := 0
 		e := 0
+		c := 0
 		t := time.Now()
 
 		defer func() {
-			logrus.Info("---")
-			logrus.Infof("total records = %d", b+e)
-			logrus.Infof("successfully imported %d records", c)
-			logrus.Infof("failed to import %d records", (b-c)+e)
-			logrus.Infof("finished in %v", time.Now().Sub(t))
+			logrus.Info("--- import csv")
+			logrus.Infof("total records for import = %d", b+e)
+			logrus.Infof("successfully imported = %d", i)
+			logrus.Infof("previously cached = %d", c)
+			logrus.Infof("invalid imports = %d", e)
+			logrus.Infof("skipped records = %d", c+e)
+			logrus.Infof("import finished in %v", time.Now().Sub(t))
 
 			close(filtered)
 		}()
 
 		for {
 			select {
-			case geoData, ok := <-imported.GeoDataBatch:
+			case batch, ok := <-imported.GeoDataBatch:
 				if !ok {
 					return
 				}
-				b += len(geoData)
+				b += len(batch)
 
-				batch := make([]*Geo, 0)
-				for _, g := range geoData {
+				buf := make([]*Geo, 0)
+				for _, g := range batch {
 					if g.valid() {
-						batch = append(batch, g)
+						cached, err := ldr.cache.Get(g.Ip)
+						if err == nil && strings.TrimSpace(cached) != "" {
+							c++
+							continue
+						}
+
+						i++
+						buf = append(buf, g)
 					}
 				}
-				c += len(batch)
-				filtered <- batch
+				filtered <- buf
 			case <-imported.OnError:
 				e++
 			case <-ctx.Done():
@@ -119,78 +138,82 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) c
 	return filtered
 }
 
-func (ldr *loader) filterUnique(ctx context.Context, filtered <-chan []*Geo) <-chan []*Geo {
-	unique := make(chan []*Geo)
+func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) <-chan []*Geo {
+	storedItems := make(chan []*Geo)
+	b := 0
+	i := 0
+	e := 0
+	t := time.Now()
 
 	go func() {
-		defer close(unique)
+		defer func() {
+			logrus.Info("--- store in db")
+			logrus.Infof("total records to store = %d", b)
+			logrus.Infof("successfully stored = %d", i)
+			logrus.Infof("failed to store = %d", e)
+			logrus.Infof("store finished in %v", time.Now().Sub(t))
 
-		buf := make([]*Geo, 0)
+			close(storedItems)
+		}()
 
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case geoData, ok := <-filtered:
+			case batch, ok := <-geoData:
 				if !ok {
 					return
 				}
+				b += len(batch)
 
-				batch := make([]*Geo, 0)
-				for _, g := range geoData {
-					if !exists(g, buf) {
-						batch = append(batch, g)
-						buf = append(buf, g)
-					}
+				stored, err := ldr.storer.Store(batch)
+				i += stored
+				if err != nil {
+					e++
+					continue
 				}
-				if len(batch) > 0 {
-					unique <- batch
-				}
+
+				// TODO: handle items not successfully stored,
+				// we do not have guarantee that all batched items will be stored
+				storedItems <- batch
 			}
 		}
 	}()
 
-	return unique
+	return storedItems
 }
 
-func (ldr *loader) storeGeoData(ctx context.Context, filtered <-chan []*Geo) {
-	c := 0
+func (ldr *loader) cacheGeoData(ctx context.Context, geoData <-chan []*Geo) {
 	b := 0
+	i := 0
+	e := 0
 	t := time.Now()
 
 	defer func() {
-		logrus.Info("---")
-		logrus.Infof("total records to store = %d", b)
-		logrus.Infof("successfully stored %d records", c)
-		logrus.Infof("failed to store %d records", b-c)
-		logrus.Infof("store finished in %v", time.Now().Sub(t))
+		logrus.Info("--- cache")
+		logrus.Infof("total records to cache = %d", b)
+		logrus.Infof("successfully cached = %d", i)
+		logrus.Infof("failed to cache = %d", e)
+		logrus.Infof("cache finished in %v", time.Now().Sub(t))
 	}()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case batch, ok := <-filtered:
+		case batch, ok := <-geoData:
 			if !ok {
 				return
 			}
 			b += len(batch)
 
-			stored, err := ldr.storer.Store(batch)
-			c += stored
-			if err != nil {
-				continue
+			for _, g := range batch {
+				if err := ldr.cache.Store(g.Ip, g.Ip); err != nil {
+					e++
+					continue
+				}
+				i++
 			}
 		}
 	}
-}
-
-func exists(g *Geo, buf []*Geo) bool {
-	for _, b := range buf {
-		if g.Ip == b.Ip {
-			return true
-		}
-	}
-
-	return false
 }

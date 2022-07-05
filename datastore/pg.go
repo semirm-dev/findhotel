@@ -39,11 +39,6 @@ func (storer *pgStore) Store(geoData []*geo.Geo) (int, error) {
 	var bulk []*Geo
 
 	for _, g := range geoData {
-		existing, _ := storer.ByIp(g.Ip)
-		if existing != nil {
-			continue
-		}
-
 		bulk = append(bulk, geoToEntity(g))
 	}
 
@@ -51,7 +46,14 @@ func (storer *pgStore) Store(geoData []*geo.Geo) (int, error) {
 		return 0, nil
 	}
 
-	return len(bulk), storer.db.Create(bulk).Error
+	c := storer.db.Create(bulk)
+
+	var err error
+	if int(c.RowsAffected) != len(bulk) {
+		err = c.Error
+	}
+
+	return int(c.RowsAffected), err
 }
 
 func (storer *pgStore) ByIp(ip string) (*geo.Geo, error) {

@@ -12,6 +12,7 @@ services:
       - -path=/app-data/data_dump.csv
     depends_on:
       - db
+      - redis
     volumes:
       - ./cmd/loader/data_dump.csv:/app-data/
     networks:
@@ -37,8 +38,12 @@ services:
       - POSTGRES_DB=findhotel_geo
     ports:
       - "5432:5432"
-  #    volumes:
-  #      - ./db-data/:/var/lib/postgresql/data/
-  #      - ./internal/seed/migrations/created_database.sql:/docker-entrypoint-initdb.d/create_tables.sql
+  redis:
+    image: redis:latest
+    container_name: findhotel_redis
+    environment:
+      - REDIS_PASSWORD=
+    ports:
+      - "6379:6379"
 networks:
   findhotel:
