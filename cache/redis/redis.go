@@ -1,7 +1,7 @@
 package redis
 
 import (
-	"github.com/go-redis/redis"
+	redisLib "github.com/go-redis/redis"
 	"github.com/semirm-dev/findhotel/geo"
 )
 
@@ -9,7 +9,7 @@ import (
 const pipeLength = 1
 
 type cache struct {
-	*redis.Client
+	*redisLib.Client
 	*Config
 }
 
@@ -37,7 +37,7 @@ func NewCache(conf *Config) *cache {
 }
 
 func (c *cache) Initialize() error {
-	client := redis.NewClient(&redis.Options{
+	client := redisLib.NewClient(&redisLib.Options{
 		Addr:     c.Config.Host + ":" + c.Config.Port,
 		Password: c.Config.Password, // no password set
 		DB:       c.Config.DB,       // use default DB
@@ -68,18 +68,22 @@ func (c *cache) Store(items geo.CacheBucket) error {
 	return err
 }
 
-func (c *cache) Get(key string) (string, error) {
-	cacheValue, err := c.Client.Get(key).Result()
+func (c *cache) Get(keys []string) ([]string, error) {
+	pipe := c.Pipeline()
 
-	switch {
-	// key does not exist
-	case err == redis.Nil:
-		// errors.New(fmt.Sprintf("key %v does not exist", key))
-		return "", nil
-	// some other error
-	case err != nil:
-		return "", err
+	for _, k := range keys {
+		pipe.Get(k)
 	}
 
-	return cacheValue, nil
+	res, err := pipe.Exec()
+	if err != nil && err != redisLib.Nil {
+		return nil, err
+	}
+
+	values := make([]string, 0)
+	for _, item := range res {
+		values = append(values, item.(*redisLib.StringCmd).Val())
+	}
+
+	return values, nil
 }

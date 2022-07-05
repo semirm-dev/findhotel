@@ -39,7 +39,7 @@ type CacheBucket map[string]string
 // that is to make less database calls on *geo data insert
 type Cache interface {
 	Store(CacheBucket) error
-	Get(string) (string, error)
+	Get([]string) ([]string, error)
 }
 
 // Imported presents each imported *geo data record/row
@@ -114,24 +114,36 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 				}
 				b += len(batch)
 
-				buf := make([]*Geo, 0)
-				cacheBucket := make(CacheBucket)
+				keysToCheck := make([]string, 0)
+				validBatch := make([]*Geo, 0)
 				for _, g := range batch {
 					if g.valid() {
-						cached, _ := ldr.cache.Get(g.Ip)
-						if strings.TrimSpace(cached) != "" {
-							c++
-							continue
-						}
-
-						cacheBucket[g.Ip] = g.Ip
-						i++
-						buf = append(buf, g)
+						keysToCheck = append(keysToCheck, g.Ip)
+						validBatch = append(validBatch, g)
 					}
 				}
-				if err := ldr.cache.Store(cacheBucket); err != nil {
-					e++
+
+				keysExist, err := ldr.cache.Get(keysToCheck)
+				if err != nil {
+					e += len(keysToCheck)
+					break
 				}
+
+				cacheBucket := make(CacheBucket)
+				buf := make([]*Geo, 0)
+				for _, vb := range validBatch {
+					if !exists(vb.Ip, keysExist) {
+						cacheBucket[vb.Ip] = vb.Ip
+						buf = append(buf, vb)
+						i++
+					}
+				}
+
+				if err = ldr.cache.Store(cacheBucket); err != nil {
+					e += len(cacheBucket)
+					break
+				}
+
 				filtered <- buf
 			case <-imported.OnError:
 				e++
@@ -142,6 +154,16 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 	}()
 
 	return filtered
+}
+
+func exists(key string, keys []string) bool {
+	for _, k := range keys {
+		if k == key {
+			return true
+		}
+	}
+
+	return false
 }
 
 // storeGeoData will store *geo data in database.
@@ -170,12 +192,12 @@ func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
 			}
 			b += len(batch)
 
-			stored, err := ldr.storer.Store(batch)
-			i += stored
-			if err != nil {
-				e++
-				continue
-			}
+			//stored, err := ldr.storer.Store(batch)
+			//i += stored
+			//if err != nil {
+			//	e++
+			//	continue
+			//}
 		}
 	}
 }

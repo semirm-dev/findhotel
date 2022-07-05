@@ -30,7 +30,6 @@ func main() {
 	if err := cacheStore.Initialize(); err != nil {
 		logrus.Fatal(err)
 	}
-	//cacheStore := c2go.NewC2Go("geo_data")
 	ldr := geo.NewLoader(importer.NewCsvImporter(*path, 100), ds, cacheStore)
 	ldr.Load(impCtx)
 }

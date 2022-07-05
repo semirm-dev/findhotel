@@ -18,6 +18,11 @@ func (c *cache) Store(items geo.CacheBucket) error {
 	return nil
 }
 
-func (c *cache) Get(key string) (string, error) {
-	return c.items[key], nil
+func (c *cache) Get(keys []string) ([]string, error) {
+	values := make([]string, 0)
+	for _, k := range keys {
+		values = append(values, c.items[k])
+	}
+
+	return values, nil
 }
