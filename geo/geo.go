@@ -180,12 +180,11 @@ func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
 			}
 			b += len(batch)
 
-			//stored, err := ldr.storer.Store(batch)
-			//i += stored
-			//if err != nil {
-			//	e++
-			//	continue
-			//}
+			stored, err := ldr.storer.Store(batch)
+			i += stored
+			if err != nil {
+				e += len(batch)
+			}
 		}
 	}
 }
