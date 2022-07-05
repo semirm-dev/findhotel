@@ -91,7 +91,6 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 		b := 0
 		i := 0
 		e := 0
-		c := 0
 		t := time.Now()
 
 		defer func() {
@@ -100,10 +99,8 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 			logrus.Infof("=== import csv ===\n"+
 				"- total records for import = %d\n"+
 				"- successfully imported = %d\n"+
-				"- previously cached (duplicate entries) = %d\n"+
-				"- invalid imports = %d\n"+
 				"- skipped records = %d\n"+
-				"- import finished in %v", b+e, i, c, e, c+e, time.Now().Sub(t))
+				"- import finished in %v", b+e, i, (b+e)-i, time.Now().Sub(t))
 		}()
 
 		for {
@@ -133,7 +130,6 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 				buf := make([]*Geo, 0)
 				for _, vb := range validBatch {
 					if exists(vb.Ip, keysExist) { // check duplicate ips for entire storage
-						c++
 						continue
 					}
 					cacheBucket[vb.Ip] = vb.Ip
