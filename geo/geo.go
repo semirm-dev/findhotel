@@ -117,7 +117,7 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 				keysToCheck := make([]string, 0)
 				validBatch := make([]*Geo, 0)
 				for _, g := range batch {
-					if g.valid() {
+					if g.valid() && !exists(g.Ip, keysToCheck) { // check duplicate ips per batch
 						keysToCheck = append(keysToCheck, g.Ip)
 						validBatch = append(validBatch, g)
 					}
@@ -132,11 +132,13 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 				cacheBucket := make(CacheBucket)
 				buf := make([]*Geo, 0)
 				for _, vb := range validBatch {
-					if !exists(vb.Ip, keysExist) {
-						cacheBucket[vb.Ip] = vb.Ip
-						buf = append(buf, vb)
-						i++
+					if exists(vb.Ip, keysExist) { // check duplicate ips for entire storage
+						c++
+						continue
 					}
+					cacheBucket[vb.Ip] = vb.Ip
+					buf = append(buf, vb)
+					i++
 				}
 
 				if err = ldr.cache.Store(cacheBucket); err != nil {
@@ -154,16 +156,6 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 	}()
 
 	return filtered
-}
-
-func exists(key string, keys []string) bool {
-	for _, k := range keys {
-		if k == key {
-			return true
-		}
-	}
-
-	return false
 }
 
 // storeGeoData will store *geo data in database.
@@ -200,4 +192,14 @@ func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
 			//}
 		}
 	}
+}
+
+func exists(key string, keys []string) bool {
+	for _, k := range keys {
+		if k == key {
+			return true
+		}
+	}
+
+	return false
 }
