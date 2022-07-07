@@ -6,7 +6,6 @@ require (
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/muesli/cache2go v0.0.0-20211005105910-8e46465cca4a
 	github.com/sirupsen/logrus v1.8.1
 	google.golang.org/grpc v1.47.0
 	gorm.io/driver/postgres v1.3.7
