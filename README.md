@@ -5,7 +5,7 @@
 docker-compose up db redis
 ```
 * Then start loader to load all dump_data.csv into database and gateway to expose an api to search for geolocations
-* It takes about 33 seconds to import all data
+* It takes about 35-40 seconds to import all data
 ```shell
 docker-compose up loader gateway
 ```
@@ -24,12 +24,8 @@ go test ./... -v
 - expose GET /geo?ip= endpoint to get geo data based on ip
 - uses geo.Search api to search go 
 
-> Optimisation of -w (number of database store workers) in loader is important, 5 should be optimal.
-> Having too many workers can lead to data loss during the insert into database. 
-> It depends on your laptop and local postgres setup/performance - make sure to not overkill with pg queries.
-
 **Todo**
 - [ ] implement re-try logic if insert into database fails! Really important!! Right now data loss is possible.
 - [ ] improve importer, split data_dump.csv into smaller files and then process each file concurrently
-- [ ] improve error handling when storing data into database, some entries can fail insert and no feedback is provided
+- [ ] improve error handling when storing data into database, some inserts can fail and no feedback is provided
 - [ ] improve data load/import time to be less than 20s

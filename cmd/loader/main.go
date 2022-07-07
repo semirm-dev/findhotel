@@ -17,7 +17,7 @@ var (
 	csvPath    = flag.String("p", "cmd/loader/data_dump.csv", "path to csv file")
 	connString = flag.String("c", defaultConnStr, "Database connection string")
 	redisHost  = flag.String("r", "localhost", "Redis host")
-	workers    = flag.Int("w", 5, "Redis host")
+	batch      = flag.Int("b", 400, "Batch size")
 )
 
 func main() {
@@ -33,6 +33,6 @@ func main() {
 	if err := cacheStore.Initialize(); err != nil {
 		logrus.Fatal(err)
 	}
-	ldr := geo.NewLoader(importer.NewCsvImporter(*csvPath, 400), ds, cacheStore)
-	ldr.Load(impCtx, *workers)
+	ldr := geo.NewLoader(importer.NewCsvImporter(*csvPath, *batch), ds, cacheStore)
+	ldr.Load(impCtx)
 }
