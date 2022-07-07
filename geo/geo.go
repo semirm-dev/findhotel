@@ -70,6 +70,8 @@ func NewLoader(importer Importer, storer Storer, cache Cache) *loader {
 func (ldr *loader) Load(ctx context.Context) {
 	t := time.Now()
 
+	logrus.Info("import in progress...")
+
 	imported := ldr.importer.Import(ctx)
 	filtered := ldr.filterValidGeoData(ctx, imported)
 	ldr.storeGeoData(ctx, filtered)
