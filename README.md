@@ -1,7 +1,15 @@
 **Run**
+* Please start database and redis first because they take some time to boot. 
+> I didnt implement healtchecks to make sure services are not started before databases are ready
 ```shell
-docker-compose up
+docker-compose up db redis
 ```
+* Then start loader to load all dump_data.csv into database and gateway to expose an api to search for geolocations
+* It takes about 33 seconds to import all data
+```shell
+docker-compose up loader gateway
+```
+
 **Tests**
 ```shell
 go test ./... -v
@@ -24,4 +32,4 @@ go test ./... -v
 - [ ] implement re-try logic if insert into database fails! Really important!! Right now data loss is possible.
 - [ ] improve importer, split data_dump.csv into smaller files and then process each file concurrently
 - [ ] improve error handling when storing data into database, some entries can fail insert and no feedback is provided
-- [ ] improve data load time to be less than 20s, right now average time is ~33s
+- [ ] improve data load/import time to be less than 20s
