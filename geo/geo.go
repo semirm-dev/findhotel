@@ -120,29 +120,31 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 				}
 				b += len(batch)
 
-				keysToCheck := make([]string, 0)
+				// filter valid *geo objects and discard duplicate ips from this batch
+				ipsFromCurrentBatch := make([]string, 0)
 				validBatch := make([]*Geo, 0)
-				for _, g := range batch {
-					if g.valid() && !exists(g.Ip, keysToCheck) { // check duplicate ips for incoming batch
-						keysToCheck = append(keysToCheck, g.Ip)
-						validBatch = append(validBatch, g)
+				for _, newGeo := range batch {
+					if newGeo.valid() && !exists(newGeo.Ip, ipsFromCurrentBatch) {
+						ipsFromCurrentBatch = append(ipsFromCurrentBatch, newGeo.Ip)
+						validBatch = append(validBatch, newGeo)
 					}
 				}
 
-				keysExist, err := ldr.cache.Get(keysToCheck)
+				existingIps, err := ldr.cache.Get(ipsFromCurrentBatch)
 				if err != nil {
-					e += len(keysToCheck)
+					e += len(ipsFromCurrentBatch)
 					break
 				}
 
+				// filter duplicate ips against previously persisted ips
 				cacheBucket := make(CacheBucket)
 				buf := make([]*Geo, 0)
-				for _, vb := range validBatch {
-					if exists(vb.Ip, keysExist) { // check duplicate ips for previously stored batch
+				for _, newGeo := range validBatch {
+					if exists(newGeo.Ip, existingIps) {
 						continue
 					}
-					cacheBucket[vb.Ip] = vb.Ip
-					buf = append(buf, vb)
+					cacheBucket[newGeo.Ip] = newGeo.Ip
+					buf = append(buf, newGeo)
 					i++
 				}
 
