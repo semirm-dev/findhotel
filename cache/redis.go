@@ -1,4 +1,4 @@
-package redis
+package cache
 
 import (
 	redisLib "github.com/go-redis/redis"
@@ -8,12 +8,12 @@ import (
 // pipeLength defines limit whether to use pipeline or not
 const pipeLength = 1
 
-type cache struct {
+type redis struct {
 	*redisLib.Client
-	*Config
+	*redisConfig
 }
 
-type Config struct {
+type redisConfig struct {
 	Host       string
 	Port       string
 	Password   string
@@ -21,8 +21,8 @@ type Config struct {
 	PipeLength int
 }
 
-func NewConfig() *Config {
-	return &Config{
+func NewRedisConfig() *redisConfig {
+	return &redisConfig{
 		Host:     "localhost",
 		Port:     "6379",
 		Password: "",
@@ -30,21 +30,21 @@ func NewConfig() *Config {
 	}
 }
 
-func NewCache(conf *Config) *cache {
-	return &cache{
-		Config: conf,
+func NewRedis(conf *redisConfig) *redis {
+	return &redis{
+		redisConfig: conf,
 	}
 }
 
-func (c *cache) Initialize() error {
+func (c *redis) Initialize() error {
 	client := redisLib.NewClient(&redisLib.Options{
-		Addr:     c.Config.Host + ":" + c.Config.Port,
-		Password: c.Config.Password, // no password set
-		DB:       c.Config.DB,       // use default DB
+		Addr:     c.redisConfig.Host + ":" + c.redisConfig.Port,
+		Password: c.redisConfig.Password, // no password set
+		DB:       c.redisConfig.DB,       // use default DB
 	})
 
-	if c.Config.PipeLength == 0 {
-		c.Config.PipeLength = pipeLength
+	if c.redisConfig.PipeLength == 0 {
+		c.redisConfig.PipeLength = pipeLength
 	}
 
 	_, err := client.Ping().Result()
@@ -57,7 +57,7 @@ func (c *cache) Initialize() error {
 	return nil
 }
 
-func (c *cache) Store(items geo.CacheBucket) error {
+func (c *redis) Store(items geo.CacheBucket) error {
 	pipe := c.Pipeline()
 
 	for k, v := range items {
@@ -68,7 +68,7 @@ func (c *cache) Store(items geo.CacheBucket) error {
 	return err
 }
 
-func (c *cache) Get(keys []string) ([]string, error) {
+func (c *redis) Get(keys []string) ([]string, error) {
 	pipe := c.Pipeline()
 
 	for _, k := range keys {

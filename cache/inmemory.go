@@ -1,16 +1,16 @@
-package inmemory
+package cache
 
 import "github.com/semirm-dev/findhotel/geo"
 
-type cache struct {
+type inmemory struct {
 	items map[string]string
 }
 
-func NewInMemory() *cache {
-	return &cache{}
+func NewInMemory() *inmemory {
+	return &inmemory{}
 }
 
-func (c *cache) Store(items geo.CacheBucket) error {
+func (c *inmemory) Store(items geo.CacheBucket) error {
 	for k, v := range items {
 		c.items[k] = v
 	}
@@ -18,7 +18,7 @@ func (c *cache) Store(items geo.CacheBucket) error {
 	return nil
 }
 
-func (c *cache) Get(keys []string) ([]string, error) {
+func (c *inmemory) Get(keys []string) ([]string, error) {
 	values := make([]string, 0)
 	for _, k := range keys {
 		values = append(values, c.items[k])

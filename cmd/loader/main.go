@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/semirm-dev/findhotel/cache/redis"
+	"github.com/semirm-dev/findhotel/cache"
 	"github.com/semirm-dev/findhotel/datastore"
 	"github.com/semirm-dev/findhotel/geo"
 	"github.com/semirm-dev/findhotel/importer"
@@ -28,9 +28,9 @@ func main() {
 	defer impCancel()
 
 	ds := datastore.NewPg(db.PostgresDb(*connString))
-	conf := redis.NewConfig()
+	conf := cache.NewRedisConfig()
 	conf.Host = *redisHost
-	cacheStore := redis.NewCache(conf)
+	cacheStore := cache.NewRedis(conf)
 	if err := cacheStore.Initialize(); err != nil {
 		logrus.Fatal(err)
 	}
