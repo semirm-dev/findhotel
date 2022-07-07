@@ -12,6 +12,7 @@ services:
       - -p=/app-data/data_dump.csv
       - -r=findhotel_redis
       - -b=2000
+      - -w=4
     depends_on:
       - db
       - redis

@@ -18,6 +18,7 @@ var (
 	connString = flag.String("c", defaultConnStr, "Database connection string")
 	redisHost  = flag.String("r", "localhost", "Redis host")
 	batch      = flag.Int("b", 400, "Batch size")
+	workers    = flag.Int("w", 5, "Number of data store workers")
 )
 
 func main() {
@@ -34,5 +35,5 @@ func main() {
 		logrus.Fatal(err)
 	}
 	ldr := geo.NewLoader(importer.NewCsvImporter(*csvPath, *batch), ds, cacheStore)
-	ldr.Load(impCtx)
+	ldr.Load(impCtx, *workers)
 }

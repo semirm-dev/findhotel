@@ -1,11 +1,11 @@
 **Run**
 * Please start database and redis first because they take some time to boot. 
-> I didnt implement healtchecks to make sure services are not started before databases are ready
+> I didnt implement healthchecks to make sure services are not started before databases are ready
 ```shell
 docker-compose up db redis
 ```
 * Then start loader to load all dump_data.csv into database and gateway to expose an api to search for geolocations
-* It takes about 35-40 seconds to import all data
+* It takes about 30-35 seconds to import all data
 ```shell
 docker-compose up loader gateway
 ```
