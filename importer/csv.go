@@ -31,6 +31,7 @@ func (imp *csvImporter) Import(ctx context.Context) *geo.Imported {
 	go func(ctx context.Context, imported *geo.Imported) {
 		defer func() {
 			close(imported.GeoDataBatch)
+			close(imported.OnError)
 			logrus.Warn("csv importer finished")
 		}()
 
