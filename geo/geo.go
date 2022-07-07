@@ -4,8 +4,6 @@ import (
 	"context"
 	"github.com/sirupsen/logrus"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -92,20 +90,20 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 	filtered := make(chan []*Geo)
 
 	go func() {
-		var b, i, e int32
+		b := 0
+		i := 0
+		e := 0
 		t := time.Now()
-		wg := sync.WaitGroup{}
 
-		defer func(wg *sync.WaitGroup) {
-			wg.Wait()
+		defer func() {
 			close(filtered)
 
 			f := time.Now().Sub(t)
 			logrus.Infof("=== import csv ===\n"+
 				"- total records imported = %d\n"+
 				"- filtered and valid data = %d\n"+
-				"- bench = %d rps", b+e, i, (b+e)/int32(f.Seconds()))
-		}(&wg)
+				"- bench = %d rps", b+e, i, (b+e)/int(f.Seconds()))
+		}()
 
 		for {
 			select {
@@ -113,7 +111,7 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 				if !ok {
 					return
 				}
-				b += int32(len(batch))
+				b += len(batch)
 
 				keysToCheck := make([]string, 0)
 				validBatch := make([]*Geo, 0)
@@ -126,7 +124,7 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 
 				keysExist, err := ldr.cache.Get(keysToCheck)
 				if err != nil {
-					atomic.AddInt32(&e, int32(len(keysToCheck)))
+					e += len(keysToCheck)
 					break
 				}
 
@@ -141,15 +139,10 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 					i++
 				}
 
-				wg.Add(1)
-				go func(cacheBucket CacheBucket, wg *sync.WaitGroup) {
-					defer wg.Done()
-
-					if err = ldr.cache.Store(cacheBucket); err != nil {
-						atomic.AddInt32(&e, int32(len(cacheBucket)))
-						return
-					}
-				}(cacheBucket, &wg)
+				if err = ldr.cache.Store(cacheBucket); err != nil {
+					e += len(cacheBucket)
+					return
+				}
 
 				filtered <- buf
 			case <-imported.OnError:
