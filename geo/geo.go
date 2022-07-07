@@ -102,10 +102,9 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 
 			f := time.Now().Sub(t)
 			logrus.Infof("=== import csv ===\n"+
-				"- total records for import = %d\n"+
-				"- successfully imported = %d\n"+
-				"- skipped records = %d\n"+
-				"- bench = %d rps", b+e, i, (b+e)-i, (b+e)/int32(f.Seconds()))
+				"- total records imported = %d\n"+
+				"- filtered and valid data = %d\n"+
+				"- bench = %d rps", b+e, i, (b+e)/int32(f.Seconds()))
 		}(&wg)
 
 		for {
