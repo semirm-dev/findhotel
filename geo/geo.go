@@ -166,19 +166,18 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 // storeGeoData will store *geo data in database.
 // It must be last in the line, all data should already be checked and validated.
 func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
-	var b, i, e int32
+	b := 0
+	i := 0
+	e := 0
 	t := time.Now()
-	wg := sync.WaitGroup{}
 
-	defer func(wg *sync.WaitGroup) {
-		wg.Wait()
-
+	defer func() {
 		logrus.Infof("=== store in db ===\n"+
 			"- total records to store = %d\n"+
 			"- successfully stored = %d\n"+
 			"- failed to store = %d\n"+
 			"- store finished in %v", b, i, e, time.Now().Sub(t))
-	}(&wg)
+	}()
 
 	for {
 		select {
@@ -188,18 +187,13 @@ func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
 			if !ok {
 				return
 			}
-			b += int32(len(batch))
+			b += len(batch)
 
-			wg.Add(1)
-			go func(batch []*Geo, wg *sync.WaitGroup) {
-				defer wg.Done()
-
-				stored, err := ldr.storer.Store(batch)
-				atomic.AddInt32(&i, int32(stored))
-				if err != nil {
-					atomic.AddInt32(&e, int32(len(batch)))
-				}
-			}(batch, &wg)
+			stored, err := ldr.storer.Store(batch)
+			i += stored
+			if err != nil {
+				e += len(batch)
+			}
 		}
 	}
 }

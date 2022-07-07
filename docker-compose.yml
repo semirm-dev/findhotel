@@ -29,7 +29,7 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - loader
+      - db
     networks:
       - findhotel
   db:
