@@ -67,14 +67,20 @@ func NewLoader(importer Importer, storer Storer, cache Cache) *loader {
 }
 
 // Load will start loading *geo data from Importer to Storer
-func (ldr *loader) Load(ctx context.Context) {
+func (ldr *loader) Load(ctx context.Context, workers int) {
 	t := time.Now()
 
 	logrus.Info("import in progress...")
 
 	imported := ldr.importer.Import(ctx)
 	filtered := ldr.filterValidGeoData(ctx, imported)
-	ldr.storeGeoData(ctx, filtered)
+
+	var wg sync.WaitGroup
+	wg.Add(workers)
+	for i := 0; i < workers; i++ {
+		go ldr.storeGeoData(ctx, i, &wg, filtered)
+	}
+	wg.Wait()
 
 	logrus.Infof("=== total time finished in %v ===", time.Now().Sub(t))
 }
@@ -105,8 +111,7 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 				"- total records for import = %d\n"+
 				"- successfully imported = %d\n"+
 				"- skipped records = %d\n"+
-				"- import finished in %v\n"+
-				"- bench = %d rps", b+e, i, (b+e)-i, f, (b+e)/int32(f.Seconds()))
+				"- bench = %d rps", b+e, i, (b+e)-i, (b+e)/int32(f.Seconds()))
 		}(&wg)
 
 		for {
@@ -167,18 +172,17 @@ func (ldr *loader) filterValidGeoData(ctx context.Context, imported *Imported) <
 
 // storeGeoData will store *geo data in database.
 // It must be last in the line, all data should already be checked and validated.
-func (ldr *loader) storeGeoData(ctx context.Context, geoData <-chan []*Geo) {
+func (ldr *loader) storeGeoData(ctx context.Context, worker int, wg *sync.WaitGroup, geoData <-chan []*Geo) {
 	b := 0
 	i := 0
 	e := 0
-	t := time.Now()
 
 	defer func() {
-		logrus.Infof("=== store in db ===\n"+
+		wg.Done()
+		logrus.Infof("=== store in db - worker %d ===\n"+
 			"- total records to store = %d\n"+
 			"- successfully stored = %d\n"+
-			"- failed to store = %d\n"+
-			"- store finished in %v", b, i, e, time.Now().Sub(t))
+			"- failed to store = %d\n", worker, b, i, e)
 	}()
 
 	for {
