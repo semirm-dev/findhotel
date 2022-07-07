@@ -14,8 +14,9 @@ import (
 const defaultConnStr = "host=localhost port=5432 dbname=findhotel_geo user=postgres password=postgres sslmode=disable"
 
 var (
-	path       = flag.String("path ", "cmd/loader/data_dump.csv", "path to csv file")
-	connString = flag.String("connStr", defaultConnStr, "Condition Service connection string")
+	csvPath    = flag.String("p", "cmd/loader/data_dump.csv", "path to csv file")
+	connString = flag.String("c", defaultConnStr, "Database connection string")
+	redisHost  = flag.String("r", "localhost", "Redis host")
 )
 
 func main() {
@@ -26,10 +27,11 @@ func main() {
 
 	ds := datastore.NewPg(db.PostgresDb(*connString))
 	conf := redis.NewConfig()
+	conf.Host = *redisHost
 	cacheStore := redis.NewCache(conf)
 	if err := cacheStore.Initialize(); err != nil {
 		logrus.Fatal(err)
 	}
-	ldr := geo.NewLoader(importer.NewCsvImporter(*path, 400), ds, cacheStore)
+	ldr := geo.NewLoader(importer.NewCsvImporter(*csvPath, 400), ds, cacheStore)
 	ldr.Load(impCtx)
 }

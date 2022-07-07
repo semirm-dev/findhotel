@@ -8,13 +8,14 @@ services:
       dockerfile: cmd/loader/Dockerfile
     container_name: findhotel_loader
     command:
-      - -connStr=host=findhotel_pg port=5432 dbname=findhotel_geo user=postgres password=postgres sslmode=disable
-      - -path=/app-data/data_dump.csv
+      - -c=host=findhotel_pg port=5432 dbname=findhotel_geo user=postgres password=postgres sslmode=disable
+      - -p=/app-data/data_dump.csv
+      - -r=findhotel_redis
     depends_on:
       - db
       - redis
     volumes:
-      - ./cmd/loader/data_dump.csv:/app-data/
+      - ./cmd/loader/data_dump.csv:/app-data/data_dump.csv
     networks:
       - findhotel
   gateway:
@@ -23,6 +24,8 @@ services:
       context: .
       dockerfile: cmd/gateway/Dockerfile
     container_name: findhotel_gateway
+    command:
+      - -c=host=findhotel_pg port=5432 dbname=findhotel_geo user=postgres password=postgres sslmode=disable
     ports:
       - "8000:8000"
     depends_on:
@@ -38,6 +41,8 @@ services:
       - POSTGRES_DB=findhotel_geo
     ports:
       - "5432:5432"
+    networks:
+      - findhotel
   redis:
     image: redis:latest
     container_name: findhotel_redis
@@ -45,5 +50,7 @@ services:
       - REDIS_PASSWORD=
     ports:
       - "6379:6379"
+    networks:
+      - findhotel
 networks:
   findhotel:

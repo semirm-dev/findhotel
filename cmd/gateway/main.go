@@ -12,7 +12,7 @@ const defaultConnStr = "host=localhost port=5432 dbname=findhotel_geo user=postg
 
 var (
 	httpAddr   = flag.String("http", ":8000", "Http address")
-	connString = flag.String("connStr", defaultConnStr, "Condition Service connection string")
+	connString = flag.String("c", defaultConnStr, "Database connection string")
 )
 
 func main() {
