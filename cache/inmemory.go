@@ -7,7 +7,9 @@ type inmemory struct {
 }
 
 func NewInMemory() *inmemory {
-	return &inmemory{}
+	return &inmemory{
+		items: make(map[string]string),
+	}
 }
 
 func (c *inmemory) Store(items geo.CacheBucket) error {
@@ -25,4 +27,8 @@ func (c *inmemory) Get(keys []string) ([]string, error) {
 	}
 
 	return values, nil
+}
+
+func (c *inmemory) All() map[string]string {
+	return c.items
 }

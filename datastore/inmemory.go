@@ -25,3 +25,7 @@ func (storer *inmemory) ByIp(ip string) (*geo.Geo, error) {
 
 	return nil, nil
 }
+
+func (storer *inmemory) All() []*geo.Geo {
+	return storer.data
+}
