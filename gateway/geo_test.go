@@ -13,7 +13,7 @@ import (
 	"testing"
 )
 
-func TestGetGeoLocation_IpExists(t *testing.T) {
+func TestGetGeoLocation_IpExists_ReturnsGeo(t *testing.T) {
 	searchApi := datastore.NewInMemory()
 	stored, err := searchApi.Store([]*geo.Geo{
 		{
@@ -65,7 +65,7 @@ func TestGetGeoLocation_IpExists(t *testing.T) {
 	assert.Equal(t, "cc1", resp.CountryCode)
 }
 
-func TestGetGeoLocation_IpNotExists(t *testing.T) {
+func TestGetGeoLocation_IpNotExists_ReturnsNil(t *testing.T) {
 	searchApi := datastore.NewInMemory()
 
 	router := web.NewRouter()
@@ -92,7 +92,7 @@ func TestGetGeoLocation_IpNotExists(t *testing.T) {
 	assert.Nil(t, resp)
 }
 
-func TestGetGeoLocation_IpNotGiven(t *testing.T) {
+func TestGetGeoLocation_IpNotGiven_ReturnsNil(t *testing.T) {
 	searchApi := datastore.NewInMemory()
 
 	router := web.NewRouter()
