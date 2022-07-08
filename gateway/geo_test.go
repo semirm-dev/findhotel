@@ -91,3 +91,30 @@ func TestGetGeoLocation_IpNotExists(t *testing.T) {
 	}
 	assert.Nil(t, resp)
 }
+
+func TestGetGeoLocation_IpNotGiven(t *testing.T) {
+	searchApi := datastore.NewInMemory()
+
+	router := web.NewRouter()
+	router.GET("geo", gateway.GetGeoLocation(searchApi))
+
+	req, _ := http.NewRequest("GET", "/geo", nil)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fail()
+	}
+
+	respBody, err := ioutil.ReadAll(w.Body)
+	if err != nil {
+		t.Fail()
+	}
+
+	var resp *geo.Geo
+	if err = json.Unmarshal(respBody, &resp); err != nil {
+		t.Fail()
+	}
+	assert.Nil(t, resp)
+}

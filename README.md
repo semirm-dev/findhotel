@@ -21,8 +21,8 @@ go test ./... -v
 
 **Gateway**
 - runs on 8000 port (configurable)
-- expose GET /geo?ip= endpoint to get geo data based on ip
-- uses geo.Search api to search go 
+- expose GET /geo?ip= endpoint to get *geo data based on ip
+- uses geo.Search api to search for *geo data
 
 **Todo**
 - [ ] implement re-try logic if insert into database fails! Really important!! Right now data loss is possible.
